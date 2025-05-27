@@ -11,5 +11,7 @@ npm install lucide-react
 }
 npm run dev - frontend:::
 node server - backend 
+
+//
 use server on other terminal || 
 use src on other terminal 
