@@ -9,6 +9,7 @@ important :
 install npm i 
 npm install lucide-react
 }
-
-use server on other terminal 
+npm run dev - frontend:::
+node server - backend 
+use server on other terminal || 
 use src on other terminal 
