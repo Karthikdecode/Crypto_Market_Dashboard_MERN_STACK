@@ -150,7 +150,7 @@ router.get('/top-losers', async (req, res) => {
 
 
 //get spot 
-router.get('/api/v1/market', async (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const response = await axios.get('https://api.kucoin.com/api/v1/market/allTickers');
     const data = response.data.data.ticker;
