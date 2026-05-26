@@ -157,9 +157,9 @@ const MarketStats = () => {
     const fetchMarketData = async () => {
       try {
         const [trendingRes, gainersRes, losersRes] = await Promise.all([
-          axios.get(`http://localhost:5000/api/v1/market/trending?t=${Date.now()}`),
-          axios.get(`http://localhost:5000/api/v1/market/top-gainers?t=${Date.now()}`),
-          axios.get(`http://localhost:5000/api/v1/market/top-losers?t=${Date.now()}`)
+          axios.get(`${import.meta.env.VITE_API_URL}/v1/market/trending?t=${Date.now()}`),
+          axios.get(`${import.meta.env.VITE_API_URL}/v1/market/top-gainers?t=${Date.now()}`),
+          axios.get(`${import.meta.env.VITE_API_URL}/v1/market/top-losers?t=${Date.now()}`)
         ]);
 
          console.log("Trending:", trendingRes.data);

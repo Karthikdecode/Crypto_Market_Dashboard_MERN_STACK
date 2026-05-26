@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Star, StarOff, TrendingUp, Filter, ArrowUp, ArrowDown } from 'lucide-react';
-import axios from 'axios';
+import { Search, TrendingUp, Filter, ArrowUp, ArrowDown, ChevronLeft, ChevronRight } from 'lucide-react';
 
-import { toast } from 'react-toastify';
 import Loader from '../../components/ui/Loader';
 import CurrencyPair from './components/CurrencyPair';
 import DashboardTabs from './components/DashboardTabs';
@@ -20,21 +18,21 @@ interface Currency {
 }
 
 const Dashboard = () => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'favorites' | 'all' | 'spot' >('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'favorites'>('overview');
   const [currencies, setCurrencies] = useState<Currency[]>([]);
-  const [announcements, setAnnouncements] = useState<any[]>([]);
-  const [filterType, setFilterType] = useState('USDT');
   const [filteredCurrencies, setFilteredCurrencies] = useState<Currency[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortConfig, setSortConfig] = useState<{ key: keyof Currency; direction: 'asc' | 'desc' } | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(25);
   
   // Get real-time data from WebSocket
-  const { prices, isConnected } = useCryptoSocket();
+  const { isConnected } = useCryptoSocket();
  useEffect(() => {
     const fetchCurrencies = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/currencies'); 
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/currencies`); 
         const data = await response.json();
 
         if (data.currencies) {
@@ -49,136 +47,7 @@ const Dashboard = () => {
 
     fetchCurrencies();
   }, []);
-
-  useEffect(() => {
-  if (activeTab === 'Announcements') {
-    axios.get('http://localhost:5000/api/v3/market/announcements')
-      .then(res => {
-        setAnnouncements(res.data.announcements);  
-      })
-      .catch(err => {
-        toast.error('Failed to load announcements');
-        console.error(err);
-      });
-  }
-}, [activeTab]);
-
-//all tab:
-useEffect(() => {
-  const fetchAllTickers = async () => {
-    try {
-      setLoading(true);
-      const res = await axios.get('http://localhost:5000/api/v1/market/allTickers');
-
-      const tickers = res?.data?.data?.ticker;
-      if (!Array.isArray(tickers)) {
-        throw new Error("Ticker data is not an array");
-      }
-
-      const formatted = [];
-
-      for (const item of tickers) {
-        try {
-          const last = parseFloat(item.last);
-          const changeRate = parseFloat(item.changeRate);
-          const volValue = parseFloat(item.volValue);
-
-          if (!item.symbol || isNaN(last) || isNaN(changeRate) || isNaN(volValue)) {
-            console.warn("Skipping malformed ticker:", item);
-            continue;
-          }
-
-          formatted.push({
-            symbol: item.symbol,
-            name: item.symbol.split('-')[0],
-            price: last,
-            change24h: changeRate * 100,
-            volume24h: volValue,
-            marketCap: 0,
-            isFavorite: false,
-          });
-        } catch (mapError) {
-          console.error("Error mapping ticker item:", item, mapError);
-        }
-      }
-
-      setCurrencies(formatted);
-    } catch (err) {
-      console.error("Error in fetchAllTickers:", err); // only show toast if nothing succeeded
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (activeTab === 'all') {
-    fetchAllTickers();
-  }
-}, [activeTab]);
-
-
-
-// Spot tab: fetch live spot market data from KuCoin
-useEffect(() => {
-  const fetchSpotTickers = async () => {
-    try {
-      setLoading(true);
-      const res = await axios.get('http://localhost:5000/api/v1/market/spotdata');
-      const tickers = res.data;
-
-      if (!Array.isArray(tickers)) throw new Error('Unexpected ticker format');
-
-      const spotTickers = tickers.filter(item =>
-        item.symbol.includes('-') &&
-        !item.symbol.includes('M') &&
-        !item.symbol.includes('SWAP')
-      );
-
-      const formatted = spotTickers.map(item => ({
-        symbol: item.symbol,
-        name: item.symbol.split('-')[0],
-        price: parseFloat(item.last),
-        change24h: parseFloat(item.changeRate) * 100,
-        volume24h: parseFloat(item.volValue),
-        marketCap: 0,
-        isFavorite: false,
-      }));
-
-      setCurrencies(formatted);
-    } catch (error) {
-      console.error('Error fetching spot tickers:', error);
-      toast.error('Failed to load spot market data');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (activeTab === 'spot') {
-    fetchSpotTickers();
-  }
-}, [activeTab]);
-
-
-  // Update prices from WebSocket data
-  useEffect(() => {
-    if (prices && Object.keys(prices).length > 0) {
-      setCurrencies(prev => 
-        prev.map(currency => {
-          const symbol = currency.symbol.replace('-', '');
-          if (prices[symbol]) {
-            return {
-              ...currency,
-              price: prices[symbol].price,
-              change24h: prices[symbol].change || currency.change24h
-            };
-          }
-          return currency;
-        })
-      );
-    }
-  }, [prices]);
-
   
-
   // Filter currencies based on active tab and search term
   useEffect(() => {
     let result = [...currencies];
@@ -186,15 +55,8 @@ useEffect(() => {
     // Apply tab filtering
     if (activeTab === 'favorites') {
       result = result.filter(currency => currency.isFavorite);
-    } else if (activeTab === 'spot') {
-  result = result.filter(currency =>
-    !currency.symbol.includes('SWAP') && // exclude perpetual contracts
-    !currency.symbol.includes('M') &&    // exclude margin/futures symbols like BTC-USDTM
-    currency.symbol.includes('-')        // keep only base-quote format like BTC-USDT
-  );
-}
+    }
 
-    
     // Apply search filtering
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
@@ -220,6 +82,30 @@ useEffect(() => {
     
     setFilteredCurrencies(result);
   }, [currencies, activeTab, searchTerm, sortConfig]);
+
+  // Reset pagination when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filteredCurrencies]);
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredCurrencies.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedCurrencies = filteredCurrencies.slice(startIndex, endIndex);
+
+  const handlePreviousPage = () => {
+    setCurrentPage(prev => Math.max(1, prev - 1));
+  };
+
+  const handleNextPage = () => {
+    setCurrentPage(prev => Math.min(totalPages, prev + 1));
+  };
+
+  const handleItemsPerPageChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setItemsPerPage(Number(e.target.value));
+    setCurrentPage(1);
+  };
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
@@ -297,144 +183,6 @@ useEffect(() => {
       
       <MarketStats />
       
-
-     {activeTab === 'Announcements' && (
-  <div className="mt-6 bg-white dark:bg-dark-300 p-4 rounded shadow">
-    <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Latest Announcements</h2>
-    <ul className="space-y-4">
-      {announcements.map(item => (
-        <li key={item.annId} className="border-b pb-2">
-          <a
-            href={item.annUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-primary-600 dark:text-primary-400 hover:underline"
-          >
-            {item.annTitle}
-          </a>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            {new Date(item.cTime).toLocaleString()}
-          </p>
-        </li>
-      ))}
-    </ul>
-  </div>
-)}
-
-{activeTab === 'spot' && (
-  <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-    
-    <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-          - This is Spot tab
-        </p>
-        <div className="flex gap-1 mb-2">
-  {['USDT', 'USDC', 'BTC', 'ETH'].map((type) => (
-    <button
-      key={type}
-      onClick={() => setFilterType(type)}
-      className={`px-4 py-1.5 rounded-full text-sm font-medium border transition ${
-        filterType === type
-          ? 'bg-black text-white border-black'
-          : 'bg-white text-gray-500 border-gray-300 hover:border-black'
-      }`}
-    >
-      {type}
-    </button>
-  ))}
-</div>
-
-    {/* {filteredCurrencies.map((currency) => ( */}
-      {filteredCurrencies
-  .filter((currency) => currency.symbol.endsWith(`-${filterType}`))
-  .map((currency) => (
-      <div
-       
-        key={currency.symbol}
-        className="border rounded-lg bg-white dark:bg-dark-300 p-4 shadow hover:shadow-lg transition"
-      >
-        <div className="flex justify-between items-start">
-           
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-              {currency.symbol}
-            </h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              {currency.name}
-            </p>
-          </div>
-          <button
-            onClick={() => toggleFavorite(currency.symbol)}
-            className="text-yellow-400 hover:text-yellow-500"
-          >
-            {currency.isFavorite ? <Star size={18} /> : <StarOff size={18} />}
-          </button>
-        </div>
-
-        <div className="mt-4">
-          <p className="text-xl font-bold text-gray-900 dark:text-white">
-            ${currency.price.toFixed(4)}
-          </p>
-          <p
-            className={`text-sm mt-1 font-medium ${
-              currency.change24h >= 0 ? 'text-green-500' : 'text-red-500'
-            }`}
-          >
-            {currency.change24h.toFixed(2)}%
-          </p>
-        </div>
-
-        <div className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-          24h Volume: {currency.volume24h.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-        </div>
-      </div>
-    ))}
-  </div>
-)}
-
-
-
-{activeTab === 'all' && (
-  <div className="mt-6 bg-white dark:bg-dark-300 p-4 rounded shadow">
-    <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">All Market Tickers</h2>
-
-    {loading ? (
-      <div className="text-center text-gray-600 dark:text-gray-300">Loading data...</div>
-    ) : (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {currencies
-          .filter(currency =>
-            currency.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            currency.symbol.toLowerCase().includes(searchTerm.toLowerCase())
-          )
-          .map((currency, index) => (
-            <div
-              key={index}
-              className="border p-4 rounded-md bg-white dark:bg-dark-200 shadow hover:shadow-lg transition-shadow"
-            >
-              <div className="flex justify-between items-center">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{currency.symbol}</h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{currency.name}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-xl font-bold text-green-500">${currency.price.toFixed(4)}</p>
-                  <p
-                    className={`text-sm ${
-                      currency.change24h >= 0 ? 'text-green-500' : 'text-red-500'
-                    }`}
-                  >
-                    {currency.change24h.toFixed(2)}%
-                  </p>
-                </div>
-              </div>
-            </div>
-          ))}
-      </div>
-    )}
-  </div>
-)}
-
-
       <DashboardTabs activeTab={activeTab} setActiveTab={setActiveTab} />
       
       <div className="bg-white dark:bg-dark-300 rounded-lg shadow overflow-hidden mt-6">
@@ -491,8 +239,8 @@ useEffect(() => {
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-dark-300 divide-y divide-gray-200 dark:divide-gray-700">
-              {filteredCurrencies.length > 0 ? (
-                filteredCurrencies.map(currency => (
+              {paginatedCurrencies.length > 0 ? (
+                paginatedCurrencies.map(currency => (
                   <CurrencyPair
                     key={currency.symbol}
                     currency={currency}
@@ -513,6 +261,114 @@ useEffect(() => {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Controls */}
+        {filteredCurrencies.length > 0 && (
+          <div className="bg-gray-50 dark:bg-dark-200 px-6 py-4 border-t border-gray-200 dark:border-dark-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+            {/* Rows per page selector */}
+            <div className="flex items-center space-x-2">
+              <label className="text-sm text-gray-700 dark:text-gray-300">Rows per page:</label>
+              <select
+                value={itemsPerPage}
+                onChange={handleItemsPerPageChange}
+                className="px-3 py-1 border border-gray-300 dark:border-dark-100 rounded-md text-sm bg-white dark:bg-dark-300 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+              >
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+            </div>
+
+            {/* Page info */}
+            <div className="text-sm text-gray-700 dark:text-gray-300">
+              {startIndex + 1}-{Math.min(endIndex, filteredCurrencies.length)} of {filteredCurrencies.length}
+            </div>
+
+            {/* Navigation buttons */}
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={handlePreviousPage}
+                disabled={currentPage === 1}
+                className="p-2 rounded-md border border-gray-300 dark:border-dark-100 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-dark-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                aria-label="Previous page"
+              >
+                <ChevronLeft size={18} />
+              </button>
+
+            {/* Page numbers */}
+            <div className="flex items-center space-x-1">
+              {(() => {
+                const pages = [];
+                const maxPagesToShow = 5;
+                let startPage = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2));
+                let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
+                
+                if (endPage - startPage < maxPagesToShow - 1) {
+                  startPage = Math.max(1, endPage - maxPagesToShow + 1);
+                }
+
+                if (startPage > 1) {
+                  pages.push(
+                    <button
+                      key={1}
+                      onClick={() => setCurrentPage(1)}
+                      className="px-3 py-1 rounded-md text-sm font-medium border border-gray-300 dark:border-dark-100 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-dark-100"
+                    >
+                      1
+                    </button>
+                  );
+                  if (startPage > 2) {
+                    pages.push(<span key="dots-start" className="px-2 text-gray-400">...</span>);
+                  }
+                }
+
+                for (let i = startPage; i <= endPage; i++) {
+                  pages.push(
+                    <button
+                      key={i}
+                      onClick={() => setCurrentPage(i)}
+                      className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                        currentPage === i
+                          ? 'bg-primary-500 text-white'
+                          : 'border border-gray-300 dark:border-dark-100 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-dark-100'
+                      }`}
+                    >
+                      {i}
+                    </button>
+                  );
+                }
+
+                if (endPage < totalPages) {
+                  if (endPage < totalPages - 1) {
+                    pages.push(<span key="dots-end" className="px-2 text-gray-400">...</span>);
+                  }
+                  pages.push(
+                    <button
+                      key={totalPages}
+                      onClick={() => setCurrentPage(totalPages)}
+                      className="px-3 py-1 rounded-md text-sm font-medium border border-gray-300 dark:border-dark-100 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-dark-100"
+                    >
+                      {totalPages}
+                    </button>
+                  );
+                }
+
+                return pages;
+              })()}
+            </div>
+
+              <button
+                onClick={handleNextPage}
+                disabled={currentPage === totalPages}
+                className="p-2 rounded-md border border-gray-300 dark:border-dark-100 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-dark-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                aria-label="Next page"
+              >
+                <ChevronRight size={18} />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

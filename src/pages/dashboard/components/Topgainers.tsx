@@ -16,7 +16,7 @@ const TopGainers = () => {
   useEffect(() => {
     const fetchTopGainers = async () => {
       try {
-        const response = await axios.get(`http://localhost:5000/api/v1/market/top-gainers?t=${Date.now()}`);
+        const response = await axios.get(`${import.meta.env.VITE_API_URL}/v1/market/top-gainers?t=${Date.now()}`);
         setTopGainers(response.data.topGainers);
       } catch (err) {
         console.error('Error fetching top gainers:', err);

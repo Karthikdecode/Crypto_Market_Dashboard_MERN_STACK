@@ -69,7 +69,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const register = async (name: string, email: string, password: string) => {
     try {
-      await axios.post(`http://localhost:5000/api/auth/register`, { name, email, password });
+      await axios.post(`${apiUrl}/auth/register`, { name, email, password });
       navigate('/verify-otp', { state: { email } });
     } catch (error) {
       console.error('Registration failed:', error);

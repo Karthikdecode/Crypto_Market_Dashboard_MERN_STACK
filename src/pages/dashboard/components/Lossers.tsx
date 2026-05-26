@@ -16,7 +16,7 @@ const TopLosers = () => {
   useEffect(() => {
     const fetchTopLosers = async () => {
       try {
-        const response = await axios.get(`http://localhost:5000/api/v1/market/top-losers?t=${Date.now()}`);
+        const response = await axios.get(`${import.meta.env.VITE_API_URL}/v1/market/top-losers?t=${Date.now()}`);
         setTopLosers(response.data.topLosers);
       } catch (err) {
         console.error('Error fetching top losers:', err);

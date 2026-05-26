@@ -16,6 +16,12 @@ const VerifyOTP = lazy(() => import('./pages/auth/VerifyOTP'));
 const ForgotPassword = lazy(() => import('./pages/auth/ForgotPassword'));
 const ResetPassword = lazy(() => import('./pages/auth/ResetPassword'));
 const Dashboard = lazy(() => import('./pages/dashboard/Dashboard'));
+const Profile = lazy(() => import('./pages/dashboard/Profile'));
+const Settings = lazy(() => import('./pages/dashboard/Settings'));
+const Favorites = lazy(() => import('./pages/dashboard/Favorites'));
+const AllTickers = lazy(() => import('./pages/dashboard/AllTickers'));
+const SpotMarkets = lazy(() => import('./pages/dashboard/SpotMarkets'));
+const Announcements = lazy(() => import('./pages/dashboard/Announcements'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 
 function App() {
@@ -42,6 +48,12 @@ function App() {
           <Route path="/" element={<Layout />}>
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="dashboard" element={<Dashboard />} />
+            <Route path="profile" element={<Profile />} />
+            <Route path="settings" element={<Settings />} />
+            <Route path="favorites" element={<Favorites />} />
+            <Route path="all-tickers" element={<AllTickers />} />
+            <Route path="spot-markets" element={<SpotMarkets />} />
+            <Route path="announcements" element={<Announcements />} />
             <Route path="/trending" element={<TrendingCoins />} />
             <Route path="/gainers" element={<TopGainers />} />
             <Route path="/toplosers" element={<TopLosers />} />

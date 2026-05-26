@@ -78,7 +78,7 @@ const ResetPassword = () => {
               id="confirmPassword"
               type="password"
               label="Confirm Password"
-              placeholder="Confirm your password"
+              placeholder="Confirm password"
               leftIcon={<Lock size={18} className="text-gray-500" />}
               error={errors.confirmPassword?.message}
               {...register('confirmPassword')}

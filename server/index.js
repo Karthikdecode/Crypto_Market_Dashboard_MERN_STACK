@@ -109,15 +109,23 @@ import authRoutes from './routes/auth.js';
 import marketRoutes from './routes/market.js';
 import { Server } from 'socket.io';       // ✅ Import Socket.IO
 import http from 'http';                  // ✅ Required to create HTTP server for Socket.IO
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-dotenv.config();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load environment variables from the root directory
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 const app = express();
 
 // Middleware
 app.use(cors({
-  origin: 'http://localhost:5173',
-  credentials: true
+  origin: '*',
+  credentials: false,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json());
 app.use(cookieParser());
@@ -144,7 +152,16 @@ app.get('/health', (req, res) => {
 
 // Error handler
 app.use((err, req, res, next) => {
-  console.error(err.stack);
+  console.error('❌ Error:', err.message);
+  
+  // Handle MongoDB buffering timeout
+  if (err.message && err.message.includes('buffering timed out')) {
+    return res.status(503).json({
+      message: 'Database connection error. Please try again later.',
+      error: 'DATABASE_TIMEOUT'
+    });
+  }
+  
   res.status(err.statusCode || 500).json({
     message: err.message || 'Internal Server Error',
     stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
@@ -157,8 +174,9 @@ const server = http.createServer(app);
 // ✅ Create Socket.IO server
 const io = new Server(server, {
   cors: {
-    origin: 'http://localhost:5173',
-    credentials: true
+    origin: '*',
+    credentials: false,
+    methods: ['GET', 'POST']
   }
 });
 
@@ -180,14 +198,52 @@ server.listen(PORT, () => {
   console.log(` Server running on port ${PORT}`);
 });
 
-// ✅ Connect MongoDB
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/crypto-platform')
-  .then(() => {
+// ✅ Connect MongoDB with proper options
+const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/crypto-platform';
+console.log('📡 Attempting to connect to MongoDB...');
+console.log('Using Atlas:', mongoUri.includes('mongodb.net') ? 'YES' : 'NO (Local)');
+
+let mongoConnectAttempts = 0;
+const MAX_RETRIES = 5;
+const RETRY_DELAY = 5000;
+
+const connectMongoDB = async () => {
+  try {
+    await mongoose.connect(mongoUri, {
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+      retryWrites: true,
+      maxPoolSize: 10,
+      minPoolSize: 5
+    });
     console.log('✅ Connected to MongoDB');
-  })
-  .catch((err) => {
-    console.error('❌ MongoDB connection error:', err);
-  });
+    mongoConnectAttempts = 0; // Reset on successful connection
+  } catch (err) {
+    mongoConnectAttempts++;
+    console.error(`❌ MongoDB connection error (attempt ${mongoConnectAttempts}/${MAX_RETRIES}):`, err.message);
+    
+    if (mongoConnectAttempts < MAX_RETRIES) {
+      console.log(`🔄 Retrying in ${RETRY_DELAY/1000} seconds...`);
+      setTimeout(connectMongoDB, RETRY_DELAY);
+    } else {
+      console.error('❌ Max retries reached. MongoDB connection failed.');
+      console.log('⚠️ Server running without database connection. Check your MongoDB Atlas IP whitelist.');
+    }
+  }
+};
+
+connectMongoDB();
+
+// Handle MongoDB connection events
+mongoose.connection.on('disconnected', () => {
+  console.log('⚠️ MongoDB disconnected');
+  mongoConnectAttempts = 0;
+  setTimeout(connectMongoDB, RETRY_DELAY);
+});
+
+mongoose.connection.on('error', (err) => {
+  console.error('❌ MongoDB connection error event:', err.message);
+});
 
 // ✅ Graceful shutdown
 process.on('SIGTERM', () => {

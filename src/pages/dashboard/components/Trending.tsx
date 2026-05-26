@@ -16,7 +16,7 @@ const TrendingCoins = () => {
  useEffect(() => {
   const fetchTrending = async () => {
     try {
-      const response = await axios.get(`http://localhost:5000/api/v1/market/trending?t=${Date.now()}`);
+      const response = await axios.get(`${import.meta.env.VITE_API_URL}/v1/market/trending?t=${Date.now()}`);
       const tickers: Ticker[] = response.data.trending;
       setTrendingCoins([...tickers]); // force re-render even if data is same
     } catch (err) {
