@@ -96,7 +96,7 @@ const AuthPreviewSection = () => {
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                onClick={() => navigate('/register')}
+                onClick={() => navigate('/login')}
                 className="flex items-center justify-center gap-2 px-8 py-3 bg-gradient-to-r from-orange-400 to-orange-600 text-white font-bold rounded-lg shadow-lg shadow-orange-500/50 hover:shadow-orange-500/75 transition-all duration-300 group"
               >
                 Create Account

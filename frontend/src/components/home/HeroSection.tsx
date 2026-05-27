@@ -136,7 +136,7 @@ const HeroSection = () => {
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            onClick={() => navigate('/register')}
+            onClick={() => navigate('/login')}
             className="relative px-8 py-4 bg-gradient-to-r from-orange-400 to-orange-600 text-white font-bold rounded-lg shadow-lg shadow-orange-500/50 hover:shadow-orange-500/75 transition-all duration-300 flex items-center gap-2 group"
           >
             <span>Get Started</span>
