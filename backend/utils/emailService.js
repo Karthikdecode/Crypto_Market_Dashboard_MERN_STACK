@@ -75,10 +75,13 @@
 
 import nodemailer from 'nodemailer';
 
-// Create transporter
+// Create transporter with explicit SMTP settings for better server compatibility
 const createTransporter = () => {
+  // Use explicit SMTP settings for Gmail (works better on deployed servers)
   return nodemailer.createTransport({
-    service: process.env.EMAIL_SERVICE || 'gmail', // Defaults to Gmail if not provided
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false, // Use TLS instead of SSL for port 587
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASSWORD
