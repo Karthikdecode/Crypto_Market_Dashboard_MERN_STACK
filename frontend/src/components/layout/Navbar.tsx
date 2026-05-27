@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Menu, X, Sun, Moon, Bell, User } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -8,11 +8,17 @@ import Logo from '../ui/Logo';
 const Navbar = () => {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
   const toggleProfile = () => setIsProfileOpen(!isProfileOpen);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/');
+  };
 
   return (
     <nav className="bg-white dark:bg-dark-300 shadow-sm border-b border-gray-200 dark:border-dark-100">
@@ -68,7 +74,7 @@ const Navbar = () => {
                     <button
                       onClick={() => {
                         setIsProfileOpen(false);
-                        logout();
+                        handleLogout();
                       }}
                       className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-dark-200"
                     >
@@ -122,7 +128,7 @@ const Navbar = () => {
             <button
               onClick={() => {
                 toggleMenu();
-                logout();
+                handleLogout();
               }}
               className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-dark-200"
             >
